@@ -6,6 +6,15 @@ A decentralized inventory management system built with Solidity, GraphQL, MongoD
 
 [0x164B0B8C6cD6b8aEA4f20c3BE7E3955aD2550aa8](https://sepolia.etherscan.io/address/0x164B0B8C6cD6b8aEA4f20c3BE7E3955aD2550aa8#code)
 
+
+## Sample Request
+
+![Create User Request](https://res.cloudinary.com/oluwatobiloba/image/upload/v1731249460/web3bridge/Screenshot_2024-11-10_at_14.43.05_kbfils.png)
+
+![Add Product Request](https://res.cloudinary.com/oluwatobiloba/image/upload/v1731249460/web3bridge/Screenshot_2024-11-10_at_15.30.13_mp9exf.png)
+
+![Update Product Request](https://res.cloudinary.com/oluwatobiloba/image/upload/v1731249816/web3bridge/Screenshot_2024-11-10_at_15.42.51_dawwc0.png)
+
 ## Prerequisites
 
 - Node.js (v14+ recommended)
