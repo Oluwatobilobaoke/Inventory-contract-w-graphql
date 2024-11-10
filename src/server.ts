@@ -1,6 +1,7 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
+import { ApolloServerPluginLandingPageDisabled } from "@apollo/server/plugin/disabled";
 import express from "express";
 import http from "http";
 import cors from "cors";
@@ -84,8 +85,10 @@ const startServer = async () => {
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,
-    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
-    introspection: true, // Add this line
+    plugins: [
+      ApolloServerPluginLandingPageDisabled(),
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+    ],
   });
 
   await server.start();
