@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
+import { IUser } from "@/types";
+import mongoose, { Schema } from "mongoose";
 
-const userSchema = new mongoose.Schema({
+const userSchema = new Schema<IUser>({
   address: {
     type: String,
     required: true,
@@ -13,7 +14,7 @@ const userSchema = new mongoose.Schema({
   },
   products: [
     {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "Product",
     },
   ],
@@ -23,4 +24,4 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("User", userSchema);
+export default mongoose.model<IUser>("User", userSchema);

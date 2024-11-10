@@ -1,12 +1,14 @@
-const mongoose = require("mongoose");
+import { IProduct } from "@/types";
+import mongoose, { Schema } from "mongoose";
 
-const productSchema = new mongoose.Schema({
+
+const productSchema = new Schema<IProduct>({
   chainId: {
     type: String,
     required: true,
   },
   owner: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
@@ -28,4 +30,4 @@ const productSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("Product", productSchema);
+export default mongoose.model<IProduct>("Product", productSchema);
