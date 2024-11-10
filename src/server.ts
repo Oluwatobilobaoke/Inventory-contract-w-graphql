@@ -85,6 +85,7 @@ const startServer = async () => {
     typeDefs,
     resolvers,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+    introspection: true, // Add this line
   });
 
   await server.start();
