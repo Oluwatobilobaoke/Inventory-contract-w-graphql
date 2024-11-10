@@ -46,7 +46,7 @@ const startServer = async () => {
   const contract = new Contract(contractAddress, contractABI, wallet);
 
   const typeDefs = fs.readFileSync(
-    path.join(__dirname, "schema/schema.graphql"),
+    path.join(__dirname, "../src/schema/schema.graphql"),
     "utf-8"
   );
 
