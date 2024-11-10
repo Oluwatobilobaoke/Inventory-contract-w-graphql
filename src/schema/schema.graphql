@@ -1,16 +1,31 @@
+type User {
+  id: ID!
+  address: String!
+  username: String!
+  products: [Product]
+  createdAt: String!
+}
+
 type Product {
   id: ID!
+  chainId: String!
   name: String!
   price: String!
   quantity: Int!
+  owner: User!
+  createdAt: String!
 }
 
 type Query {
   product(id: ID!): Product
   productCount: Int!
+  users: [User!]!
+  user(id: ID!): User
+  productsByUser(userId: ID!): [Product!]!
 }
 
 type Mutation {
   addProduct(name: String!, price: String!, quantity: Int!): Product
   updateProduct(id: ID!, price: String!, quantity: Int!): Product
+  createUser(address: String!, username: String!): User
 }

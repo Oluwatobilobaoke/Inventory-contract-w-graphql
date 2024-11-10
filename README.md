@@ -23,6 +23,7 @@ PRIVATE_KEY=your_wallet_private_key
 ETHERSCAN_API_KEY=your_etherscan_api_key
 CONTRACT_ADDRESS=deployed_contract_address
 PORT=4244
+MONGODB_URI=mongodb://localhost:27017/defi-inventory
 
 ## Installation
 
@@ -77,12 +78,18 @@ The GraphQL playground will be available at: `http://localhost:4244/graphql`
 1. Get a product:
 
 ```graphql
-query GetProduct($id: Int!) {
-  getProduct(id: $id) {
+query {
+  product(id: "1") {
     id
+    chainId
     name
     price
     quantity
+    owner {
+      username
+      address
+    }
+    createdAt
   }
 }
 ```
@@ -95,13 +102,97 @@ query GetProductCount {
 }
 ```
 
-### Mutations
-
-1. Add a product:
+3. Get all users:
 
 ```graphql
-mutation AddProduct($name: String!, $price: String!, $quantity: Int!) {
-  addProduct(name: $name, price: $price, quantity: $quantity)
+query {
+  users {
+    id
+    username
+    address
+    products {
+      name
+      price
+      quantity
+    }
+    createdAt
+  }
+}
+```
+
+4. Get user by ID:
+
+```graphql
+query {
+  user(id: "1") {
+    id
+    username
+    address
+  }
+}
+```
+
+```graphql
+query {
+  user(id: "user_id_here") {
+    username
+    address
+    products {
+      name
+      price
+    }
+  }
+}
+```
+
+5. Get products by user:
+
+```graphql
+query {
+  productsByUser(address: "user_address_here") {
+    name
+    price
+  }
+}
+```
+
+```graphql
+query {
+  productsByUser(userId: "user_id_here") {
+    name
+    price
+    quantity
+    createdAt
+  }
+}
+```
+
+### Mutations
+
+1. Create user:
+
+```graphql
+mutation {
+  createUser(address: "0x123...", username: "john_doe") {
+    id
+    username
+    address
+    createdAt
+  }
+}
+```
+
+2. Add product (requires authentication):
+
+```graphql
+mutation {
+  addProduct(name: "Product Name", price: 100, quantity: 10) {
+    id
+    chainId
+    name
+    price
+    quantity
+  }
 }
 ```
 
@@ -109,55 +200,52 @@ mutation AddProduct($name: String!, $price: String!, $quantity: Int!) {
 mutation {
   addProduct(name: "Test Product", price: "1.5", quantity: 100) {
     id
+    chainId
     name
     price
     quantity
+    owner {
+      username
+    }
+    createdAt
   }
 }
 ```
 
-2. Update a product:
+## Authentication
 
-```graphql
-mutation UpdateProduct($id: Int!, $price: String!, $quantity: Int!) {
-  updateProduct(id: $id, price: $price, quantity: $quantity)
+Add your Ethereum address in the HTTP headers:
+
+```json
+{
+  "Authorization": "0x123..." // Your Ethereum address
 }
 ```
-
-```graphql
-mutation {
-  updateProduct(id: "1", price: "2.0", quantity: 150) {
-    id
-    name
-    price
-    quantity
-  }
-}
-```
-
 
 ## Project Structure
 
 - `/contracts`: Smart contract source code
-- `/src`: GraphQL server and API implementation
-- `/test`: Smart contract test files
-- `/ignition`: Deployment configuration
-- `/schema`: GraphQL schema definitions
+- `/src`
+  - `/db`: MongoDB models and connection
+  - `/schema`: GraphQL schema
+  - `server.js`: Main server file
+- `/test`: Contract tests
+- `/ignition`: Deployment configs
 
 ## Security Considerations
 
-- The contract implements manual reentrancy protection
-- Only the contract owner can add or update products
-- Price values are handled in Wei for precision
-- Ownership transfer functionality is protected
+- Contract implements manual reentrancy protection
+- Owner-only product management
+- Wei-based price handling
+- Protected ownership transfers
+- MongoDB data validation
+- Authentication via Ethereum addresses
 
 ## Network Support
 
-Currently configured for:
 - Sepolia testnet
-- Local Hardhat network (for testing)
+- Local Hardhat network (testing)
 
 ## License
 
 MIT
-

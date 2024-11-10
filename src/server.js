@@ -1,15 +1,24 @@
 const { ApolloServer } = require("apollo-server-express");
 const express = require("express");
-const { JsonRpcProvider, Wallet, Contract, parseEther, formatEther } = require("ethers");
+const {
+  JsonRpcProvider,
+  Wallet,
+  Contract,
+  parseEther,
+  formatEther,
+} = require("ethers");
 const fs = require("fs");
 const path = require("path");
+const connectDB = require("./db/conn/database");
+const User = require("./db/entities/user.entity");
+const Product = require("./db/entities/product.entity");
 require("dotenv").config();
 
-// Contract setup
-const provider = new JsonRpcProvider(
-  process.env.ALCHEMY_API_KEY_URL
-);
+// Database connection
+connectDB();
 
+// Contract setup remains the same
+const provider = new JsonRpcProvider(process.env.ALCHEMY_API_KEY_URL);
 const wallet = new Wallet(process.env.PRIVATE_KEY, provider);
 const contractAddress = process.env.CONTRACT_ADDRESS;
 const contractABI = JSON.parse(
@@ -23,17 +32,24 @@ const contractABI = JSON.parse(
 
 const contract = new Contract(contractAddress, contractABI, wallet);
 
-// GraphQL Resolvers
+// Enhanced resolvers
 const resolvers = {
   Query: {
     product: async (_, { id }) => {
       try {
         const [name, price, quantity] = await contract.getProduct(id);
+        const dbProduct = await Product.findOne({ chainId: id }).populate(
+          "owner"
+        );
+
         return {
           id,
+          chainId: id,
           name,
           price: formatEther(price),
           quantity: quantity.toString(),
+          owner: dbProduct?.owner,
+          createdAt: dbProduct?.createdAt,
         };
       } catch (error) {
         console.error("Error fetching product:", error);
@@ -49,44 +65,89 @@ const resolvers = {
         throw new Error("Failed to fetch product count");
       }
     },
+    users: async () => {
+      try {
+        return await User.find().populate("products");
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        throw new Error("Failed to fetch users");
+      }
+    },
+    user: async (_, { id }) => {
+      try {
+        return await User.findById(id).populate("products");
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        throw new Error("Failed to fetch user");
+      }
+    },
+    productsByUser: async (_, { userId }) => {
+      try {
+        return await Product.find({ owner: userId }).populate("owner");
+      } catch (error) {
+        console.error("Error fetching user products:", error);
+        throw new Error("Failed to fetch user products");
+      }
+    },
   },
   Mutation: {
-    addProduct: async (_, { name, price, quantity }) => {
+    addProduct: async (_, { name, price, quantity }, { user }) => {
       try {
         const priceWei = parseEther(price);
         const tx = await contract.addProduct(name, priceWei, quantity);
         await tx.wait();
 
         const productId = await contract.getProductCount();
-        return {
-          id: productId.toString(),
+
+        // Save to MongoDB
+        const product = new Product({
+          chainId: productId.toString(),
           name,
           price,
           quantity,
+          owner: user.id,
+        });
+
+        await product.save();
+
+        // Update user's products
+        await User.findByIdAndUpdate(user.id, {
+          $push: { products: product._id },
+        });
+
+        return {
+          id: productId.toString(),
+          chainId: productId.toString(),
+          name,
+          price,
+          quantity,
+          owner: user,
+          createdAt: product.createdAt,
         };
       } catch (error) {
         console.error("Error adding product:", error);
         throw new Error("Failed to add product");
       }
     },
-    updateProduct: async (_, { id, price, quantity }) => {
+    createUser: async (_, { address, username }) => {
       try {
-        const priceWei = parseEther(price);
-        const tx = await contract.updateProduct(id, priceWei, quantity);
-        await tx.wait();
+        // check if user already exists
+        const existingUser = await User.findOne({
+          address: address.toLowerCase(),
+        });
+        if (existingUser) {
+          throw new Error("User already exists");
+        }
 
-        const [name, updatedPrice, updatedQuantity] = await contract.getProduct(
-          id
-        );
-        return {
-          id,
-          name,
-          price: formatEther(updatedPrice),
-          quantity: updatedQuantity.toString(),
-        };
+        const user = new User({
+          address: address.toLowerCase(),
+          username,
+        });
+        await user.save();
+        return user;
       } catch (error) {
-        console.error("Error updating product:", error);
-        throw new Error("Failed to update product");
+        console.error("Error creating user:", error);
+        throw new Error("Failed to create user");
       }
     },
   },
@@ -102,6 +163,15 @@ async function startServer() {
       "utf-8"
     ),
     resolvers,
+    context: async ({ req }) => {
+      // Basic auth context
+      const address = req.headers.authorization;
+      if (address) {
+        const user = await User.findOne({ address: address.toLowerCase() });
+        return { user };
+      }
+      return {};
+    },
   });
 
   await server.start();
