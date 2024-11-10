@@ -30,7 +30,7 @@ MONGODB_URI=mongodb://localhost:27017/defi-inventory
 Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Oluwatobilobaoke/Inventory-contract-w-graphql.git
 cd defi-inventory
 ```
 
