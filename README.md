@@ -1,6 +1,6 @@
 # DeFi Inventory Manager
 
-A decentralized inventory management system built with Solidity, GraphQL, and Node.js.
+A decentralized inventory management system built with Solidity, GraphQL, MongoDB, and Node.js.
 
 ## Deployed Contract
 
