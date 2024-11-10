@@ -6,6 +6,10 @@ A decentralized inventory management system built with Solidity, GraphQL, MongoD
 
 [0x164B0B8C6cD6b8aEA4f20c3BE7E3955aD2550aa8](https://sepolia.etherscan.io/address/0x164B0B8C6cD6b8aEA4f20c3BE7E3955aD2550aa8#code)
 
+## Deployed GraphQL Server
+
+[https://inventory-contract-w-graphql.onrender.com](https://inventory-contract-w-graphql.onrender.com)
+
 
 ## Sample Request
 
