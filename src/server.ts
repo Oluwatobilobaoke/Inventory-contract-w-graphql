@@ -19,8 +19,210 @@ import connectDB from "./db/conn/database";
 import User from "./db/entities/user.entity";
 import Product from "./db/entities/product.entity";
 import { Context, IUser } from "./types";
-
+import { IResolvers } from "@graphql-tools/utils";
 dotenv.config();
+
+interface ApolloContext extends Context {
+  contract: Contract;
+}
+
+export const resolvers: IResolvers = {
+  Query: {
+    product: async (_, { id }, { contract }) => {
+      try {
+        const [name, price, quantity] = await contract.getProduct(id);
+        const dbProduct = await Product.findOne({ chainId: id }).populate(
+          "owner"
+        );
+
+        if (!dbProduct) {
+          throw new Error("Product not found in database");
+        }
+
+        return {
+          id,
+          chainId: id,
+          name,
+          price: formatEther(price),
+          quantity: quantity.toString(),
+          owner: dbProduct.owner,
+          createdAt: dbProduct.createdAt,
+        };
+      } catch (error) {
+        console.error("Error fetching product:", error);
+        throw new Error("Failed to fetch product");
+      }
+    },
+
+    //@ts-ignore
+    productCount: async (_, __, { contract }) => {
+      try {
+        const count = await contract.getProductCount();
+        return count.toString();
+      } catch (error) {
+        console.error("Error fetching product count:", error);
+        throw new Error("Failed to fetch product count");
+      }
+    },
+
+    users: async () => {
+      try {
+        return await User.find().populate("products");
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        throw new Error("Failed to fetch users");
+      }
+    },
+
+    user: async (_, { id }) => {
+      try {
+        return await User.findById(id).populate("products");
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        throw new Error("Failed to fetch user");
+      }
+    },
+
+    productsByUser: async (_, { userId }) => {
+      try {
+        const user = await User.findById(userId).populate("products");
+        if (!user) {
+          throw new Error("User not found");
+        }
+        return user.products;
+      } catch (error) {
+        console.error("Error fetching products by user:", error);
+        throw new Error("Failed to fetch products by user");
+      }
+    },
+  },
+
+  Mutation: {
+    addProduct: async (
+      _,
+      {
+        name,
+        price,
+        quantity,
+      }: { name: string; price: string; quantity: number },
+      { contract, user }
+    ) => {
+      if (!user) {
+        throw new Error("Authentication required");
+      }
+
+      try {
+        const tx = await contract.addProduct(name, parseEther(price), quantity);
+        await tx.wait();
+
+        let productCount = await contract.getProductCount();
+        productCount = productCount.toString();
+
+        const newProductId = Number(productCount) + 1;
+
+        const newProduct = new Product({
+          chainId: newProductId.toString(),
+          name,
+          price,
+          quantity,
+          owner: user._id,
+        });
+
+        await newProduct.save();
+
+        // Update user's products array
+        await User.findByIdAndUpdate(user._id, {
+          $push: { products: newProduct._id },
+        });
+
+        return {
+          id: newProduct._id,
+          chainId: newProductId,
+          name,
+          price,
+          quantity,
+          owner: user,
+          createdAt: newProduct.createdAt,
+        };
+      } catch (error) {
+        console.error("Error adding product:", error);
+        throw new Error("Failed to add product");
+      }
+    },
+
+    updateProduct: async (
+      _,
+      { id, price, quantity }: { id: string; price: string; quantity: number },
+      { contract, user }
+    ) => {
+      if (!user) {
+        throw new Error("Authentication required");
+      }
+
+      try {
+        const product = await Product.findOne({ chainId: id }).populate<{
+          owner: IUser;
+        }>("owner");
+        if (
+          !product ||
+          (product.owner as IUser)._id.toString() !== user._id.toString()
+        ) {
+          throw new Error("Product not found or unauthorized");
+        }
+
+        const tx = await contract.updateProduct(
+          id,
+          parseEther(price),
+          quantity
+        );
+        await tx.wait();
+
+        product.price = price;
+        product.quantity = quantity;
+        await product.save();
+
+        return {
+          id,
+          chainId: id,
+          name: product.name,
+          price,
+          quantity,
+          owner: user,
+          createdAt: product.createdAt,
+        };
+      } catch (error) {
+        console.error("Error updating product:", error);
+        throw new Error("Failed to update product");
+      }
+    },
+
+    createUser: async (
+      _,
+      { address, username }: { address: string; username: string }
+    ) => {
+      try {
+        const existingUser = await User.findOne({
+          address: address.toLowerCase(),
+        });
+        if (existingUser) {
+          throw new Error("User already exists");
+        }
+
+        const user = new User({
+          address: address.toLowerCase(),
+          username,
+          products: [],
+        });
+
+        await user.save();
+        return user;
+      } catch (error) {
+        console.error("Error creating user:", error);
+        throw new Error("Failed to create user");
+      }
+    },
+  },
+};
 
 const startServer = async () => {
   const app = express();
@@ -50,42 +252,10 @@ const startServer = async () => {
     "utf-8"
   );
 
-  const resolvers = {
-    Query: {
-      //@ts-ignore
-      product: async (_, { id }: { id: string }) => {
-        try {
-          const [name, price, quantity] = await contract.getProduct(id);
-          const dbProduct = await Product.findOne({ chainId: id }).populate(
-            "owner"
-          );
-
-          return {
-            id,
-            chainId: id,
-            name,
-            price: formatEther(price),
-            quantity: quantity.toString(),
-            owner: dbProduct?.owner,
-            createdAt: dbProduct?.createdAt,
-          };
-        } catch (error) {
-          console.error("Error fetching product:", error);
-          throw new Error("Failed to fetch product");
-        }
-      },
-      // ... rest of the resolvers
-    },
-    Mutation: {
-      // ... mutation resolvers
-    },
-  };
-
   const server = new ApolloServer<Context>({
     typeDefs,
     resolvers,
-    plugins: [
-      ApolloServerPluginDrainHttpServer({ httpServer })],
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
   });
 
   await server.start();
@@ -95,13 +265,16 @@ const startServer = async () => {
     cors<cors.CorsRequest>(),
     json(),
     expressMiddleware(server, {
-      context: async ({ req }): Promise<Context> => {
+      context: async ({ req }): Promise<ApolloContext> => {
         const address = req.headers.authorization;
+        let user;
         if (address) {
-          const user = await User.findOne({ address: address.toLowerCase() });
-          return { user: user as IUser };
+          user = await User.findOne({ address: address.toLowerCase() });
         }
-        return {};
+        return {
+          user: user as IUser,
+          contract,
+        };
       },
     })
   );

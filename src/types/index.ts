@@ -1,6 +1,9 @@
 import { Document } from "mongoose";
 
+import { Schema } from "mongoose";
+
 export interface IUser extends Document {
+  _id: string | Schema.Types.ObjectId;
   address: string;
   username: string;
   products: IProduct[];
@@ -8,6 +11,7 @@ export interface IUser extends Document {
 }
 
 export interface IProduct extends Document {
+  _id: string | Schema.Types.ObjectId;
   chainId: string;
   owner: IUser["_id"];
   name: string;
