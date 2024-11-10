@@ -11,6 +11,10 @@ A decentralized inventory management system built with Solidity, GraphQL, MongoD
 [https://inventory-contract-w-graphql.onrender.com](https://inventory-contract-w-graphql.onrender.com)
 
 
+
+![Deployment ](https://res.cloudinary.com/oluwatobiloba/image/upload/v1731250535/web3bridge/Screenshot_2024-11-10_at_15.49.19_odqlar.png)
+
+
 ## Sample Request
 
 ![Create User Request](https://res.cloudinary.com/oluwatobiloba/image/upload/v1731249460/web3bridge/Screenshot_2024-11-10_at_14.43.05_kbfils.png)
